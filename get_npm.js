@@ -13,43 +13,39 @@ var versions = process.argv[3].split('/');
 var binType = versions[0];
 var binVersion = versions[1];
 
+var pkgUri;
 if (binType === 'iojs') {
   // detect npm version from https://iojs.org/dist/index.json
   var NVMW_IOJS_ORG_MIRROR = process.env.NVMW_IOJS_ORG_MIRROR || 'https://iojs.org/dist';
-  var pkgUri = NVMW_IOJS_ORG_MIRROR + '/index.json';
-  wget(pkgUri, function (filename, content) {
-    if (filename === null) {
-      return noNpmAndExit();
-    }
-    var npmVersion;
-    var items = JSON.parse(content);
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      if (!npmVersion) {
-        // make sure has a npm version
-        npmVersion = item.npm;
-      }
-      if (item.version === binVersion && item.npm) {
-        npmVersion = item.npm;
-        break;
-      }
-    }
-
-    if (!npmVersion) {
-      return noNpmAndExit();
-    }
-    downloadNpmZip(npmVersion);
-  });
+  pkgUri = NVMW_IOJS_ORG_MIRROR + '/index.json';
 } else {
-  var pkgUri = util.format(NPM_PKG_JSON_URL, 'joyent/node',
-    binVersion === 'latest' ? 'master' : binVersion);
-  wget(pkgUri, function (filename, pkg) {
-    if (filename === null) {
-      return noNpmAndExit();
-    }
-    downloadNpmZip(JSON.parse(pkg).version);
-  });
+  // detect npm version from https://nodejs.org/dist/index.json
+  var NVMW_NODEJS_ORG_MIRROR = process.env.NVMW_NODEJS_ORG_MIRROR || 'https://nodejs.org/dist';
+  pkgUri = NVMW_NODEJS_ORG_MIRROR + '/index.json';
 }
+wget(pkgUri, function (filename, content) {
+  if (filename === null) {
+    return noNpmAndExit();
+  }
+  var npmVersion;
+  var items = JSON.parse(content);
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (!npmVersion) {
+      // make sure has a npm version
+      npmVersion = item.npm;
+    }
+    if (item.version === binVersion && item.npm) {
+      npmVersion = item.npm;
+      break;
+    }
+  }
+
+  if (!npmVersion) {
+    return noNpmAndExit();
+  }
+  downloadNpmZip(npmVersion);
+});
 
 function noNpmAndExit() {
   console.error('%s %s does not include npm', binType, binVersion);
