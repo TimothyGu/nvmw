@@ -24,32 +24,37 @@ function wget(uri, callback) {
         }
         var contentLength = parseInt(res.headers['content-length'], 10);
         if (isNaN(contentLength)) {
-            console.log('Can\'t get \'content-length\'');
-            callback(null);
-            return;
+            console.warn('Can\'t get \'content-length\'');
+        } else {
+            console.log('Content length is %s', bytes(contentLength));
         }
-        console.log('Content length is %s', bytes(contentLength));
 
-        var data = new Buffer(contentLength);
+        var data = [];
         var offset = 0;
 
         var start = Date.now();
         console.log(''); // New line for ESC_UP_CLL
         res.on('data', function (buf) {
-            buf.copy(data, offset);
+            data.push(buf);
             offset += buf.length;
             var use = Date.now() - start;
             if (use === 0) {
               use = 1;
             }
-            console.log(ESC_UP_CLL + 'Download %d%, %s / %s, %s/s ...',
-                parseInt(offset / contentLength * 100, 10), bytes(offset), bytes(contentLength),
-                bytes(offset / use * 1000));
+            if (contentLength) {
+                console.log(ESC_UP_CLL + 'Download %d%, %s / %s, %s/s ...',
+                    offset / contentLength * 100 | 0, bytes(offset), bytes(contentLength),
+                    bytes(offset / use * 1000));
+            } else {
+                console.log(ESC_UP_CLL + 'Download %s, %s/s ...',
+                    bytes(offset),
+                    bytes(offset / use * 1000));
+            }
         });
 
         res.on('end', function () {
             console.log('Donwload done');
-            callback(filename, data);
+            callback(filename, Buffer.concat(data, offset));
         });
     });
 
